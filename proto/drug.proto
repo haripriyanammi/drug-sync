@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package drug;
+
+option go_package = "drugsync/proto;drugpb";
+
+// ---------- The service: what methods exist ----------
+service DrugService {
+  // Unary: ask for one drug, get one drug
+  rpc GetDrug(GetDrugRequest) returns (Drug);
+
+  // Server-streaming: ask once, results flow in one by one
+  rpc SearchDrugs(SearchRequest) returns (stream Drug);
+
+  // Unary: pull fresh data from openFDA into our database
+  rpc SyncFromFDA(SyncRequest) returns (SyncResponse);
+}
+
+// ---------- The data shapes ----------
+
+message Drug {
+  string id             = 1;
+  string brand_name     = 2;
+  string generic_name   = 3;
+  string manufacturer   = 4;
+  string product_ndc    = 5;
+  string product_type   = 6;
+  string route          = 7;
+  string substance_name = 8;
+}
+
+message GetDrugRequest {
+  string id = 1;  // has one field
+}
+
+message SearchRequest {
+  string query = 1; // has two fields
+  int32  limit = 2;
+}
+
+message SyncRequest {
+  int32 count = 1;   // how many records to pull from openFDA
+}
+
+message SyncResponse {
+  int32 fetched = 1;   // how many came back from openFDA
+  int32 saved   = 2;   // how many we actually stored
+  int32 skipped = 3;   // how many we rejected as unusable
+}
