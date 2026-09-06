@@ -21,6 +21,19 @@ import (
 
 var client drugpb.DrugServiceClient
 
+// drugJSON is the shape the browser sends and receives.
+// Pointers so we can tell "not sent" from "sent as empty" for PATCH.
+type drugJSON struct {
+	Id            *string `json:"id,omitempty"`
+	BrandName     *string `json:"brand_name,omitempty"`
+	GenericName   *string `json:"generic_name,omitempty"`
+	Manufacturer  *string `json:"manufacturer,omitempty"`
+	ProductNdc    *string `json:"product_ndc,omitempty"`
+	ProductType   *string `json:"product_type,omitempty"`
+	Route         *string `json:"route,omitempty"`
+	SubstanceName *string `json:"substance_name,omitempty"`
+}
+
 func main() {
 	conn, err := grpc.NewClient("localhost:50051",
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -31,8 +44,9 @@ func main() {
 
 	client = drugpb.NewDrugServiceClient(conn)
 
-	http.HandleFunc("/drugs", handleSearch)
-	http.HandleFunc("/drugs/", handleGetOne)
+	http.HandleFunc("/drugs", handleCollection)
+	http.HandleFunc("/drugs/", handleItem)
+	http.HandleFunc("/sync", handleSync)
 
 	log.Println("REST gateway listening on :8080")
 
@@ -40,6 +54,44 @@ func main() {
 		log.Fatalf("serving: %v", err)
 	}
 }
+
+// ---------- ROUTERS ----------
+
+// /drugs  → GET (search) or POST (create)
+func handleCollection(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		handleSearch(w, r)
+	case http.MethodPost:
+		handleCreate(w, r)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+// /drugs/{id}  → GET, PUT, PATCH or DELETE
+func handleItem(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/drugs/")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing drug id")
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		handleGetOne(w, r, id)
+	case http.MethodPut:
+		handleUpdate(w, r, id)
+	case http.MethodPatch:
+		handlePatch(w, r, id)
+	case http.MethodDelete:
+		handleDelete(w, r, id)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+// ---------- READ ----------
 
 func handleSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
@@ -50,7 +102,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := reqContext(r)
 	defer cancel()
 
 	stream, err := client.SearchDrugs(ctx, &drugpb.SearchRequest{
@@ -78,14 +130,8 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, drugs)
 }
 
-func handleGetOne(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/drugs/")
-	if id == "" {
-		writeError(w, http.StatusBadRequest, "missing drug id")
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+func handleGetOne(w http.ResponseWriter, r *http.Request, id string) {
+	ctx, cancel := reqContext(r)
 	defer cancel()
 
 	d, err := client.GetDrug(ctx, &drugpb.GetDrugRequest{Id: id})
@@ -95,6 +141,159 @@ func handleGetOne(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, d)
+}
+
+// ---------- CREATE ----------
+
+func handleCreate(w http.ResponseWriter, r *http.Request) {
+	body, ok := decodeBody(w, r)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := reqContext(r)
+	defer cancel()
+
+	created, err := client.CreateDrug(ctx, &drugpb.CreateDrugRequest{
+		Drug: toDrug(body),
+	})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, created)
+}
+
+// ---------- UPDATE (full replace) ----------
+
+func handleUpdate(w http.ResponseWriter, r *http.Request, id string) {
+	body, ok := decodeBody(w, r)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := reqContext(r)
+	defer cancel()
+
+	updated, err := client.UpdateDrug(ctx, &drugpb.UpdateDrugRequest{
+		Id:   id,//from url
+		Drug: toDrug(body),// from json
+	})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// ---------- PATCH (partial update) ----------
+
+func handlePatch(w http.ResponseWriter, r *http.Request, id string) {
+	body, ok := decodeBody(w, r)
+	if !ok {
+		return
+	}
+
+	ctx, cancel := reqContext(r)
+	defer cancel()
+
+	// Pointers pass straight through: nil here means nil in the request,
+	// which means "don't change this column".
+	patched, err := client.PatchDrug(ctx, &drugpb.PatchDrugRequest{
+		Id:            id,
+		BrandName:     body.BrandName,
+		GenericName:   body.GenericName,
+		Manufacturer:  body.Manufacturer,
+		ProductNdc:    body.ProductNdc,
+		ProductType:   body.ProductType,
+		Route:         body.Route,
+		SubstanceName: body.SubstanceName,
+	})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, patched)
+}
+
+// ---------- DELETE ----------
+
+func handleDelete(w http.ResponseWriter, r *http.Request, id string) {
+	ctx, cancel := reqContext(r)
+	defer cancel()
+
+	_, err := client.DeleteDrug(ctx, &drugpb.DeleteDrugRequest{Id: id})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---------- ADMIN ----------
+
+func handleSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	count, _ := strconv.Atoi(r.URL.Query().Get("count"))
+
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	resp, err := client.SyncFromFDA(ctx, &drugpb.SyncRequest{Count: int32(count)})
+	if err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// ---------- HELPERS ----------
+
+func reqContext(r *http.Request) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(r.Context(), 10*time.Second)
+}
+
+// decodeBody reads the JSON body into a drugJSON.
+func decodeBody(w http.ResponseWriter, r *http.Request) (*drugJSON, bool) {
+	var body drugJSON
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return nil, false
+	}
+	return &body, true
+}
+
+// toDrug converts the JSON body into a protobuf Drug.
+// Missing fields become empty strings, which is correct for POST and PUT.
+func toDrug(b *drugJSON) *drugpb.Drug {
+	return &drugpb.Drug{
+		Id:            str(b.Id),
+		BrandName:     str(b.BrandName),
+		GenericName:   str(b.GenericName),
+		Manufacturer:  str(b.Manufacturer),
+		ProductNdc:    str(b.ProductNdc),
+		ProductType:   str(b.ProductType),
+		Route:         str(b.Route),
+		SubstanceName: str(b.SubstanceName),
+	}
+}
+
+// str turns a *string into a string, treating nil as "".
+func str(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }
 
 func writeJSON(w http.ResponseWriter, code int, body any) {
@@ -121,6 +320,8 @@ func writeGRPCError(w http.ResponseWriter, err error) {
 		httpCode = http.StatusNotFound
 	case codes.InvalidArgument:
 		httpCode = http.StatusBadRequest
+	case codes.AlreadyExists:
+		httpCode = http.StatusConflict
 	case codes.Unavailable:
 		httpCode = http.StatusServiceUnavailable
 	}

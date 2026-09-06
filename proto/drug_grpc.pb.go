@@ -21,6 +21,10 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	DrugService_GetDrug_FullMethodName     = "/drug.DrugService/GetDrug"
 	DrugService_SearchDrugs_FullMethodName = "/drug.DrugService/SearchDrugs"
+	DrugService_CreateDrug_FullMethodName  = "/drug.DrugService/CreateDrug"
+	DrugService_UpdateDrug_FullMethodName  = "/drug.DrugService/UpdateDrug"
+	DrugService_PatchDrug_FullMethodName   = "/drug.DrugService/PatchDrug"
+	DrugService_DeleteDrug_FullMethodName  = "/drug.DrugService/DeleteDrug"
 	DrugService_SyncFromFDA_FullMethodName = "/drug.DrugService/SyncFromFDA"
 )
 
@@ -30,10 +34,21 @@ const (
 //
 // ---------- The service: what methods exist ----------
 type DrugServiceClient interface {
+	// ---- Read ----
 	// Unary: ask for one drug, get one drug
 	GetDrug(ctx context.Context, in *GetDrugRequest, opts ...grpc.CallOption) (*Drug, error)
 	// Server-streaming: ask once, results flow in one by one
 	SearchDrugs(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Drug], error)
+	// ---- Write ----
+	// Add a brand new drug
+	CreateDrug(ctx context.Context, in *CreateDrugRequest, opts ...grpc.CallOption) (*Drug, error)
+	// Replace every field of an existing drug
+	UpdateDrug(ctx context.Context, in *UpdateDrugRequest, opts ...grpc.CallOption) (*Drug, error)
+	// Change only the fields that were sent
+	PatchDrug(ctx context.Context, in *PatchDrugRequest, opts ...grpc.CallOption) (*Drug, error)
+	// Remove a drug
+	DeleteDrug(ctx context.Context, in *DeleteDrugRequest, opts ...grpc.CallOption) (*DeleteDrugResponse, error)
+	// ---- Admin ----
 	// Unary: pull fresh data from openFDA into our database
 	SyncFromFDA(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error)
 }
@@ -75,6 +90,46 @@ func (c *drugServiceClient) SearchDrugs(ctx context.Context, in *SearchRequest, 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DrugService_SearchDrugsClient = grpc.ServerStreamingClient[Drug]
 
+func (c *drugServiceClient) CreateDrug(ctx context.Context, in *CreateDrugRequest, opts ...grpc.CallOption) (*Drug, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Drug)
+	err := c.cc.Invoke(ctx, DrugService_CreateDrug_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drugServiceClient) UpdateDrug(ctx context.Context, in *UpdateDrugRequest, opts ...grpc.CallOption) (*Drug, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Drug)
+	err := c.cc.Invoke(ctx, DrugService_UpdateDrug_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drugServiceClient) PatchDrug(ctx context.Context, in *PatchDrugRequest, opts ...grpc.CallOption) (*Drug, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Drug)
+	err := c.cc.Invoke(ctx, DrugService_PatchDrug_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drugServiceClient) DeleteDrug(ctx context.Context, in *DeleteDrugRequest, opts ...grpc.CallOption) (*DeleteDrugResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteDrugResponse)
+	err := c.cc.Invoke(ctx, DrugService_DeleteDrug_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *drugServiceClient) SyncFromFDA(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SyncResponse)
@@ -91,10 +146,21 @@ func (c *drugServiceClient) SyncFromFDA(ctx context.Context, in *SyncRequest, op
 //
 // ---------- The service: what methods exist ----------
 type DrugServiceServer interface {
+	// ---- Read ----
 	// Unary: ask for one drug, get one drug
 	GetDrug(context.Context, *GetDrugRequest) (*Drug, error)
 	// Server-streaming: ask once, results flow in one by one
 	SearchDrugs(*SearchRequest, grpc.ServerStreamingServer[Drug]) error
+	// ---- Write ----
+	// Add a brand new drug
+	CreateDrug(context.Context, *CreateDrugRequest) (*Drug, error)
+	// Replace every field of an existing drug
+	UpdateDrug(context.Context, *UpdateDrugRequest) (*Drug, error)
+	// Change only the fields that were sent
+	PatchDrug(context.Context, *PatchDrugRequest) (*Drug, error)
+	// Remove a drug
+	DeleteDrug(context.Context, *DeleteDrugRequest) (*DeleteDrugResponse, error)
+	// ---- Admin ----
 	// Unary: pull fresh data from openFDA into our database
 	SyncFromFDA(context.Context, *SyncRequest) (*SyncResponse, error)
 	mustEmbedUnimplementedDrugServiceServer()
@@ -112,6 +178,18 @@ func (UnimplementedDrugServiceServer) GetDrug(context.Context, *GetDrugRequest) 
 }
 func (UnimplementedDrugServiceServer) SearchDrugs(*SearchRequest, grpc.ServerStreamingServer[Drug]) error {
 	return status.Error(codes.Unimplemented, "method SearchDrugs not implemented")
+}
+func (UnimplementedDrugServiceServer) CreateDrug(context.Context, *CreateDrugRequest) (*Drug, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateDrug not implemented")
+}
+func (UnimplementedDrugServiceServer) UpdateDrug(context.Context, *UpdateDrugRequest) (*Drug, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateDrug not implemented")
+}
+func (UnimplementedDrugServiceServer) PatchDrug(context.Context, *PatchDrugRequest) (*Drug, error) {
+	return nil, status.Error(codes.Unimplemented, "method PatchDrug not implemented")
+}
+func (UnimplementedDrugServiceServer) DeleteDrug(context.Context, *DeleteDrugRequest) (*DeleteDrugResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteDrug not implemented")
 }
 func (UnimplementedDrugServiceServer) SyncFromFDA(context.Context, *SyncRequest) (*SyncResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SyncFromFDA not implemented")
@@ -166,6 +244,78 @@ func _DrugService_SearchDrugs_Handler(srv interface{}, stream grpc.ServerStream)
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DrugService_SearchDrugsServer = grpc.ServerStreamingServer[Drug]
 
+func _DrugService_CreateDrug_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateDrugRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DrugServiceServer).CreateDrug(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DrugService_CreateDrug_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DrugServiceServer).CreateDrug(ctx, req.(*CreateDrugRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DrugService_UpdateDrug_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDrugRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DrugServiceServer).UpdateDrug(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DrugService_UpdateDrug_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DrugServiceServer).UpdateDrug(ctx, req.(*UpdateDrugRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DrugService_PatchDrug_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PatchDrugRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DrugServiceServer).PatchDrug(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DrugService_PatchDrug_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DrugServiceServer).PatchDrug(ctx, req.(*PatchDrugRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DrugService_DeleteDrug_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteDrugRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DrugServiceServer).DeleteDrug(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DrugService_DeleteDrug_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DrugServiceServer).DeleteDrug(ctx, req.(*DeleteDrugRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DrugService_SyncFromFDA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SyncRequest)
 	if err := dec(in); err != nil {
@@ -194,6 +344,22 @@ var DrugService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDrug",
 			Handler:    _DrugService_GetDrug_Handler,
+		},
+		{
+			MethodName: "CreateDrug",
+			Handler:    _DrugService_CreateDrug_Handler,
+		},
+		{
+			MethodName: "UpdateDrug",
+			Handler:    _DrugService_UpdateDrug_Handler,
+		},
+		{
+			MethodName: "PatchDrug",
+			Handler:    _DrugService_PatchDrug_Handler,
+		},
+		{
+			MethodName: "DeleteDrug",
+			Handler:    _DrugService_DeleteDrug_Handler,
 		},
 		{
 			MethodName: "SyncFromFDA",

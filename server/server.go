@@ -24,20 +24,32 @@ func New(s *store.Store) *DrugServer {
 	return &DrugServer{store: s}
 }
 
+// storeError turns a store error into the right gRPC status code.
+func storeError(err error, action string) error {
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		return status.Error(codes.NotFound, "drug not found")
+	case errors.Is(err, store.ErrAlreadyExists):
+		return status.Error(codes.AlreadyExists, "a drug with that id already exists")
+	case errors.Is(err, store.ErrNoFields):
+		return status.Error(codes.InvalidArgument, "no fields to update")
+	default:
+		log.Printf("%s: %v", action, err)
+		return status.Error(codes.Internal, action+" failed")
+	}
+}
+
+// ---------- READ ----------
+
 func (s *DrugServer) GetDrug(ctx context.Context, req *drugpb.GetDrugRequest) (*drugpb.Drug, error) {
 	if req.Id == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
 	d, err := s.store.GetByID(ctx, req.Id)
-	if errors.Is(err, store.ErrNotFound) {
-		return nil, status.Errorf(codes.NotFound, "no drug with id %s", req.Id)
-	}
 	if err != nil {
-		log.Printf("GetDrug: %v", err)
-		return nil, status.Error(codes.Internal, "could not fetch drug")
+		return nil, storeError(err, "get drug")
 	}
-
 	return d, nil
 }
 
@@ -48,8 +60,7 @@ func (s *DrugServer) SearchDrugs(req *drugpb.SearchRequest, stream grpc.ServerSt
 
 	drugs, err := s.store.SearchByBrand(stream.Context(), req.Query, req.Limit)
 	if err != nil {
-		log.Printf("SearchDrugs: %v", err)
-		return status.Error(codes.Internal, "search failed")
+		return storeError(err, "search drugs")
 	}
 
 	for _, d := range drugs {
@@ -57,9 +68,101 @@ func (s *DrugServer) SearchDrugs(req *drugpb.SearchRequest, stream grpc.ServerSt
 			return err
 		}
 	}
-
 	return nil
 }
+
+// ---------- CREATE ----------
+
+func (s *DrugServer) CreateDrug(ctx context.Context, req *drugpb.CreateDrugRequest) (*drugpb.Drug, error) {
+	if req.Drug == nil {
+		return nil, status.Error(codes.InvalidArgument, "drug is required")
+	}
+	if req.Drug.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "drug.id is required")
+	}
+	if req.Drug.BrandName == "" && req.Drug.GenericName == "" {
+		return nil, status.Error(codes.InvalidArgument, "brand_name or generic_name is required")
+	}
+
+	created, err := s.store.Create(ctx, req.Drug)
+	if err != nil {
+		return nil, storeError(err, "create drug")
+	}
+	return created, nil
+}
+
+// ---------- UPDATE (full replace) ----------
+
+func (s *DrugServer) UpdateDrug(ctx context.Context, req *drugpb.UpdateDrugRequest) (*drugpb.Drug, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	if req.Drug == nil {
+		return nil, status.Error(codes.InvalidArgument, "drug is required")
+	}
+	if req.Drug.BrandName == "" && req.Drug.GenericName == "" {
+		return nil, status.Error(codes.InvalidArgument, "brand_name or generic_name is required")
+	}
+
+	updated, err := s.store.Update(ctx, req.Id, req.Drug)
+	if err != nil {
+		return nil, storeError(err, "update drug")
+	}
+	return updated, nil
+}
+
+// ---------- PATCH (partial update) ----------
+
+func (s *DrugServer) PatchDrug(ctx context.Context, req *drugpb.PatchDrugRequest) (*drugpb.Drug, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	fields := map[string]string{}
+
+	if req.BrandName != nil {
+		fields["brand_name"] = *req.BrandName
+	}
+	if req.GenericName != nil {
+		fields["generic_name"] = *req.GenericName
+	}
+	if req.Manufacturer != nil {
+		fields["manufacturer"] = *req.Manufacturer
+	}
+	if req.ProductNdc != nil {
+		fields["product_ndc"] = *req.ProductNdc
+	}
+	if req.ProductType != nil {
+		fields["product_type"] = *req.ProductType
+	}
+	if req.Route != nil {
+		fields["route"] = *req.Route
+	}
+	if req.SubstanceName != nil {
+		fields["substance_name"] = *req.SubstanceName
+	}
+
+	patched, err := s.store.Patch(ctx, req.Id, fields)
+	if err != nil {
+		return nil, storeError(err, "patch drug")
+	}
+	return patched, nil
+}
+
+// ---------- DELETE ----------
+
+func (s *DrugServer) DeleteDrug(ctx context.Context, req *drugpb.DeleteDrugRequest) (*drugpb.DeleteDrugResponse, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	if err := s.store.Delete(ctx, req.Id); err != nil {
+		return nil, storeError(err, "delete drug")
+	}
+	return &drugpb.DeleteDrugResponse{Deleted: true}, nil
+}
+
+// ---------- ADMIN ----------
 
 func (s *DrugServer) SyncFromFDA(ctx context.Context, req *drugpb.SyncRequest) (*drugpb.SyncResponse, error) {
 	count := req.Count
@@ -81,13 +184,11 @@ func (s *DrugServer) SyncFromFDA(ctx context.Context, req *drugpb.SyncRequest) (
 			skipped++
 			continue
 		}
-
 		if err := s.store.Save(ctx, d); err != nil {
 			log.Printf("SyncFromFDA save: %v", err)
 			skipped++
 			continue
 		}
-
 		saved++
 	}
 

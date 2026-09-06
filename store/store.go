@@ -5,21 +5,26 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	drugpb "drugsync/proto"
 )
 
-// ErrNotFound is returned when a drug id doesn't exist in the table.
-var ErrNotFound = errors.New("drug not found")
+var (
+	ErrNotFound      = errors.New("drug not found")
+	ErrAlreadyExists = errors.New("drug already exists")
+	ErrNoFields      = errors.New("no fields to update")
+)
 
-// Store holds the database connection pool.
+const columns = `id, brand_name, generic_name, manufacturer,
+                 product_ndc, product_type, route, substance_name`
+
 type Store struct {
 	db *sql.DB
 }
 
-// New opens the connection and verifies the database is actually reachable.
 func New(dsn string) (*Store, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -31,12 +36,23 @@ func New(dsn string) (*Store, error) {
 	return &Store{db: db}, nil
 }
 
-// Close shuts down the pool. Called when the server stops.
 func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-// ---------- WRITE ----------
+// scanDrug fills a Drug from one row. Used by every read.
+func scanDrug(row interface{ Scan(...any) error }) (*drugpb.Drug, error) {
+	d := &drugpb.Drug{}
+	err := row.Scan(
+		&d.Id, &d.BrandName, &d.GenericName, &d.Manufacturer,
+		&d.ProductNdc, &d.ProductType, &d.Route, &d.SubstanceName)
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// ---------- SYNC (upsert) ----------
 
 const saveQuery = `
 INSERT INTO drugs (id, brand_name, generic_name, manufacturer,
@@ -52,7 +68,6 @@ ON CONFLICT (id) DO UPDATE SET
 	substance_name = EXCLUDED.substance_name,
 	synced_at      = NOW()`
 
-// Save inserts a drug, or updates it if that id is already stored.
 func (s *Store) Save(ctx context.Context, d *drugpb.Drug) error {
 	_, err := s.db.ExecContext(ctx, saveQuery,
 		d.Id, d.BrandName, d.GenericName, d.Manufacturer,
@@ -65,18 +80,10 @@ func (s *Store) Save(ctx context.Context, d *drugpb.Drug) error {
 
 // ---------- READ ONE ----------
 
-const columns = `id, brand_name, generic_name, manufacturer,
-                 product_ndc, product_type, route, substance_name`
-
 const getQuery = `SELECT ` + columns + ` FROM drugs WHERE id = $1`
 
-// GetByID fetches a single drug. Returns ErrNotFound if the id isn't stored.
 func (s *Store) GetByID(ctx context.Context, id string) (*drugpb.Drug, error) {
-	d := &drugpb.Drug{}
-	err := s.db.QueryRowContext(ctx, getQuery, id).Scan(
-		&d.Id, &d.BrandName, &d.GenericName, &d.Manufacturer,
-		&d.ProductNdc, &d.ProductType, &d.Route, &d.SubstanceName)
-
+	d, err := scanDrug(s.db.QueryRowContext(ctx, getQuery, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -94,7 +101,6 @@ WHERE LOWER(brand_name) LIKE LOWER($1)
 ORDER BY brand_name
 LIMIT $2`
 
-// SearchByBrand finds drugs whose brand name contains the query text.
 func (s *Store) SearchByBrand(ctx context.Context, query string, limit int32) ([]*drugpb.Drug, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 20
@@ -108,19 +114,125 @@ func (s *Store) SearchByBrand(ctx context.Context, query string, limit int32) ([
 
 	var drugs []*drugpb.Drug
 	for rows.Next() {
-		d := &drugpb.Drug{}
-		if err := rows.Scan(
-			&d.Id, &d.BrandName, &d.GenericName, &d.Manufacturer,
-			&d.ProductNdc, &d.ProductType, &d.Route, &d.SubstanceName); err != nil {
+		d, err := scanDrug(rows)
+		if err != nil {
 			return nil, fmt.Errorf("reading search row: %w", err)
 		}
 		drugs = append(drugs, d)
 	}
-
-	// rows.Err() reports a failure that happened mid-iteration —
-	// the loop above ends silently on error without this check.
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("finishing search: %w", err)
 	}
 	return drugs, nil
+}
+
+// ---------- CREATE ----------
+
+const createQuery = `
+INSERT INTO drugs (id, brand_name, generic_name, manufacturer,
+                   product_ndc, product_type, route, substance_name, synced_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+ON CONFLICT (id) DO NOTHING
+RETURNING ` + columns
+
+func (s *Store) Create(ctx context.Context, d *drugpb.Drug) (*drugpb.Drug, error) {
+	created, err := scanDrug(s.db.QueryRowContext(ctx, createQuery,
+		d.Id, d.BrandName, d.GenericName, d.Manufacturer,
+		d.ProductNdc, d.ProductType, d.Route, d.SubstanceName))
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrAlreadyExists
+	}
+	if err != nil {
+		return nil, fmt.Errorf("creating drug %s: %w", d.Id, err)
+	}
+	return created, nil
+}
+
+// ---------- UPDATE (full replace) ----------
+
+const updateQuery = `
+UPDATE drugs SET
+	brand_name     = $2,
+	generic_name   = $3,
+	manufacturer   = $4,
+	product_ndc    = $5,
+	product_type   = $6,
+	route          = $7,
+	substance_name = $8,
+	synced_at      = NOW()
+WHERE id = $1
+RETURNING ` + columns
+
+func (s *Store) Update(ctx context.Context, id string, d *drugpb.Drug) (*drugpb.Drug, error) {
+	updated, err := scanDrug(s.db.QueryRowContext(ctx, updateQuery,
+		id, d.BrandName, d.GenericName, d.Manufacturer,
+		d.ProductNdc, d.ProductType, d.Route, d.SubstanceName))
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("updating drug %s: %w", id, err)
+	}
+	return updated, nil
+}
+
+// ---------- PATCH (partial update) ----------
+
+func (s *Store) Patch(ctx context.Context, id string, fields map[string]string) (*drugpb.Drug, error) {
+	if len(fields) == 0 {
+		return nil, ErrNoFields
+	}
+
+	allowed := map[string]bool{
+		"brand_name": true, "generic_name": true, "manufacturer": true,
+		"product_ndc": true, "product_type": true, "route": true,
+		"substance_name": true,
+	}
+
+	setParts := []string{}
+	args := []any{id}
+
+	for column, value := range fields {
+		if !allowed[column] {
+			return nil, fmt.Errorf("unknown column %q", column)
+		}
+		args = append(args, value)
+		setParts = append(setParts, fmt.Sprintf("%s = $%d", column, len(args)))
+	}
+
+	query := fmt.Sprintf(
+		"UPDATE drugs SET %s, synced_at = NOW() WHERE id = $1 RETURNING %s",
+		strings.Join(setParts, ", "), columns)
+
+	patched, err := scanDrug(s.db.QueryRowContext(ctx, query, args...))
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("patching drug %s: %w", id, err)
+	}
+	return patched, nil
+}
+
+// ---------- DELETE ----------
+
+const deleteQuery = `DELETE FROM drugs WHERE id = $1`
+
+func (s *Store) Delete(ctx context.Context, id string) error {
+	result, err := s.db.ExecContext(ctx, deleteQuery, id)
+	if err != nil {
+		return fmt.Errorf("deleting drug %s: %w", id, err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("checking delete result: %w", err)
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

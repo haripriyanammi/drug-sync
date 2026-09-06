@@ -21,6 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ---------- The data shapes ----------
 type Drug struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -123,7 +124,7 @@ func (x *Drug) GetSubstanceName() string {
 
 type GetDrugRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // has one field
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -167,7 +168,7 @@ func (x *GetDrugRequest) GetId() string {
 
 type SearchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"` // has two fields
+	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -217,16 +218,302 @@ func (x *SearchRequest) GetLimit() int32 {
 	return 0
 }
 
+type CreateDrugRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Drug          *Drug                  `protobuf:"bytes,1,opt,name=drug,proto3" json:"drug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateDrugRequest) Reset() {
+	*x = CreateDrugRequest{}
+	mi := &file_proto_drug_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateDrugRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateDrugRequest) ProtoMessage() {}
+
+func (x *CreateDrugRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_drug_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateDrugRequest.ProtoReflect.Descriptor instead.
+func (*CreateDrugRequest) Descriptor() ([]byte, []int) {
+	return file_proto_drug_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CreateDrugRequest) GetDrug() *Drug {
+	if x != nil {
+		return x.Drug
+	}
+	return nil
+}
+
+type UpdateDrugRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Drug          *Drug                  `protobuf:"bytes,2,opt,name=drug,proto3" json:"drug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateDrugRequest) Reset() {
+	*x = UpdateDrugRequest{}
+	mi := &file_proto_drug_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateDrugRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateDrugRequest) ProtoMessage() {}
+
+func (x *UpdateDrugRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_drug_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateDrugRequest.ProtoReflect.Descriptor instead.
+func (*UpdateDrugRequest) Descriptor() ([]byte, []int) {
+	return file_proto_drug_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdateDrugRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateDrugRequest) GetDrug() *Drug {
+	if x != nil {
+		return x.Drug
+	}
+	return nil
+}
+
+type PatchDrugRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// optional means "the sender may leave this out".
+	// A field that was left out is not changed in the database.
+	BrandName     *string `protobuf:"bytes,2,opt,name=brand_name,json=brandName,proto3,oneof" json:"brand_name,omitempty"`
+	GenericName   *string `protobuf:"bytes,3,opt,name=generic_name,json=genericName,proto3,oneof" json:"generic_name,omitempty"`
+	Manufacturer  *string `protobuf:"bytes,4,opt,name=manufacturer,proto3,oneof" json:"manufacturer,omitempty"`
+	ProductNdc    *string `protobuf:"bytes,5,opt,name=product_ndc,json=productNdc,proto3,oneof" json:"product_ndc,omitempty"`
+	ProductType   *string `protobuf:"bytes,6,opt,name=product_type,json=productType,proto3,oneof" json:"product_type,omitempty"`
+	Route         *string `protobuf:"bytes,7,opt,name=route,proto3,oneof" json:"route,omitempty"`
+	SubstanceName *string `protobuf:"bytes,8,opt,name=substance_name,json=substanceName,proto3,oneof" json:"substance_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PatchDrugRequest) Reset() {
+	*x = PatchDrugRequest{}
+	mi := &file_proto_drug_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchDrugRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchDrugRequest) ProtoMessage() {}
+
+func (x *PatchDrugRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_drug_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchDrugRequest.ProtoReflect.Descriptor instead.
+func (*PatchDrugRequest) Descriptor() ([]byte, []int) {
+	return file_proto_drug_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PatchDrugRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PatchDrugRequest) GetBrandName() string {
+	if x != nil && x.BrandName != nil {
+		return *x.BrandName
+	}
+	return ""
+}
+
+func (x *PatchDrugRequest) GetGenericName() string {
+	if x != nil && x.GenericName != nil {
+		return *x.GenericName
+	}
+	return ""
+}
+
+func (x *PatchDrugRequest) GetManufacturer() string {
+	if x != nil && x.Manufacturer != nil {
+		return *x.Manufacturer
+	}
+	return ""
+}
+
+func (x *PatchDrugRequest) GetProductNdc() string {
+	if x != nil && x.ProductNdc != nil {
+		return *x.ProductNdc
+	}
+	return ""
+}
+
+func (x *PatchDrugRequest) GetProductType() string {
+	if x != nil && x.ProductType != nil {
+		return *x.ProductType
+	}
+	return ""
+}
+
+func (x *PatchDrugRequest) GetRoute() string {
+	if x != nil && x.Route != nil {
+		return *x.Route
+	}
+	return ""
+}
+
+func (x *PatchDrugRequest) GetSubstanceName() string {
+	if x != nil && x.SubstanceName != nil {
+		return *x.SubstanceName
+	}
+	return ""
+}
+
+type DeleteDrugRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteDrugRequest) Reset() {
+	*x = DeleteDrugRequest{}
+	mi := &file_proto_drug_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteDrugRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteDrugRequest) ProtoMessage() {}
+
+func (x *DeleteDrugRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_drug_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteDrugRequest.ProtoReflect.Descriptor instead.
+func (*DeleteDrugRequest) Descriptor() ([]byte, []int) {
+	return file_proto_drug_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *DeleteDrugRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteDrugResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Deleted       bool                   `protobuf:"varint,1,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteDrugResponse) Reset() {
+	*x = DeleteDrugResponse{}
+	mi := &file_proto_drug_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteDrugResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteDrugResponse) ProtoMessage() {}
+
+func (x *DeleteDrugResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_drug_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteDrugResponse.ProtoReflect.Descriptor instead.
+func (*DeleteDrugResponse) Descriptor() ([]byte, []int) {
+	return file_proto_drug_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteDrugResponse) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
 type SyncRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Count         int32                  `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"` // how many records to pull from openFDA
+	Count         int32                  `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SyncRequest) Reset() {
 	*x = SyncRequest{}
-	mi := &file_proto_drug_proto_msgTypes[3]
+	mi := &file_proto_drug_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +525,7 @@ func (x *SyncRequest) String() string {
 func (*SyncRequest) ProtoMessage() {}
 
 func (x *SyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_drug_proto_msgTypes[3]
+	mi := &file_proto_drug_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +538,7 @@ func (x *SyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncRequest.ProtoReflect.Descriptor instead.
 func (*SyncRequest) Descriptor() ([]byte, []int) {
-	return file_proto_drug_proto_rawDescGZIP(), []int{3}
+	return file_proto_drug_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SyncRequest) GetCount() int32 {
@@ -263,16 +550,16 @@ func (x *SyncRequest) GetCount() int32 {
 
 type SyncResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Fetched       int32                  `protobuf:"varint,1,opt,name=fetched,proto3" json:"fetched,omitempty"` // how many came back from openFDA
-	Saved         int32                  `protobuf:"varint,2,opt,name=saved,proto3" json:"saved,omitempty"`     // how many we actually stored
-	Skipped       int32                  `protobuf:"varint,3,opt,name=skipped,proto3" json:"skipped,omitempty"` // how many we rejected as unusable
+	Fetched       int32                  `protobuf:"varint,1,opt,name=fetched,proto3" json:"fetched,omitempty"`
+	Saved         int32                  `protobuf:"varint,2,opt,name=saved,proto3" json:"saved,omitempty"`
+	Skipped       int32                  `protobuf:"varint,3,opt,name=skipped,proto3" json:"skipped,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SyncResponse) Reset() {
 	*x = SyncResponse{}
-	mi := &file_proto_drug_proto_msgTypes[4]
+	mi := &file_proto_drug_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -284,7 +571,7 @@ func (x *SyncResponse) String() string {
 func (*SyncResponse) ProtoMessage() {}
 
 func (x *SyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_drug_proto_msgTypes[4]
+	mi := &file_proto_drug_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -297,7 +584,7 @@ func (x *SyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncResponse.ProtoReflect.Descriptor instead.
 func (*SyncResponse) Descriptor() ([]byte, []int) {
-	return file_proto_drug_proto_rawDescGZIP(), []int{4}
+	return file_proto_drug_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SyncResponse) GetFetched() int32 {
@@ -341,18 +628,57 @@ const file_proto_drug_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\";\n" +
 	"\rSearchRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\"#\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"3\n" +
+	"\x11CreateDrugRequest\x12\x1e\n" +
+	"\x04drug\x18\x01 \x01(\v2\n" +
+	".drug.DrugR\x04drug\"C\n" +
+	"\x11UpdateDrugRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1e\n" +
+	"\x04drug\x18\x02 \x01(\v2\n" +
+	".drug.DrugR\x04drug\"\x9b\x03\n" +
+	"\x10PatchDrugRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
+	"\n" +
+	"brand_name\x18\x02 \x01(\tH\x00R\tbrandName\x88\x01\x01\x12&\n" +
+	"\fgeneric_name\x18\x03 \x01(\tH\x01R\vgenericName\x88\x01\x01\x12'\n" +
+	"\fmanufacturer\x18\x04 \x01(\tH\x02R\fmanufacturer\x88\x01\x01\x12$\n" +
+	"\vproduct_ndc\x18\x05 \x01(\tH\x03R\n" +
+	"productNdc\x88\x01\x01\x12&\n" +
+	"\fproduct_type\x18\x06 \x01(\tH\x04R\vproductType\x88\x01\x01\x12\x19\n" +
+	"\x05route\x18\a \x01(\tH\x05R\x05route\x88\x01\x01\x12*\n" +
+	"\x0esubstance_name\x18\b \x01(\tH\x06R\rsubstanceName\x88\x01\x01B\r\n" +
+	"\v_brand_nameB\x0f\n" +
+	"\r_generic_nameB\x0f\n" +
+	"\r_manufacturerB\x0e\n" +
+	"\f_product_ndcB\x0f\n" +
+	"\r_product_typeB\b\n" +
+	"\x06_routeB\x11\n" +
+	"\x0f_substance_name\"#\n" +
+	"\x11DeleteDrugRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\".\n" +
+	"\x12DeleteDrugResponse\x12\x18\n" +
+	"\adeleted\x18\x01 \x01(\bR\adeleted\"#\n" +
 	"\vSyncRequest\x12\x14\n" +
 	"\x05count\x18\x01 \x01(\x05R\x05count\"X\n" +
 	"\fSyncResponse\x12\x18\n" +
 	"\afetched\x18\x01 \x01(\x05R\afetched\x12\x14\n" +
 	"\x05saved\x18\x02 \x01(\x05R\x05saved\x12\x18\n" +
-	"\askipped\x18\x03 \x01(\x05R\askipped2\xa2\x01\n" +
+	"\askipped\x18\x03 \x01(\x05R\askipped2\xfa\x02\n" +
 	"\vDrugService\x12+\n" +
 	"\aGetDrug\x12\x14.drug.GetDrugRequest\x1a\n" +
 	".drug.Drug\x120\n" +
 	"\vSearchDrugs\x12\x13.drug.SearchRequest\x1a\n" +
-	".drug.Drug0\x01\x124\n" +
+	".drug.Drug0\x01\x121\n" +
+	"\n" +
+	"CreateDrug\x12\x17.drug.CreateDrugRequest\x1a\n" +
+	".drug.Drug\x121\n" +
+	"\n" +
+	"UpdateDrug\x12\x17.drug.UpdateDrugRequest\x1a\n" +
+	".drug.Drug\x12/\n" +
+	"\tPatchDrug\x12\x16.drug.PatchDrugRequest\x1a\n" +
+	".drug.Drug\x12?\n" +
+	"\n" +
+	"DeleteDrug\x12\x17.drug.DeleteDrugRequest\x1a\x18.drug.DeleteDrugResponse\x124\n" +
 	"\vSyncFromFDA\x12\x11.drug.SyncRequest\x1a\x12.drug.SyncResponseB\x17Z\x15drugsync/proto;drugpbb\x06proto3"
 
 var (
@@ -367,26 +693,41 @@ func file_proto_drug_proto_rawDescGZIP() []byte {
 	return file_proto_drug_proto_rawDescData
 }
 
-var file_proto_drug_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_drug_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_drug_proto_goTypes = []any{
-	(*Drug)(nil),           // 0: drug.Drug
-	(*GetDrugRequest)(nil), // 1: drug.GetDrugRequest
-	(*SearchRequest)(nil),  // 2: drug.SearchRequest
-	(*SyncRequest)(nil),    // 3: drug.SyncRequest
-	(*SyncResponse)(nil),   // 4: drug.SyncResponse
+	(*Drug)(nil),               // 0: drug.Drug
+	(*GetDrugRequest)(nil),     // 1: drug.GetDrugRequest
+	(*SearchRequest)(nil),      // 2: drug.SearchRequest
+	(*CreateDrugRequest)(nil),  // 3: drug.CreateDrugRequest
+	(*UpdateDrugRequest)(nil),  // 4: drug.UpdateDrugRequest
+	(*PatchDrugRequest)(nil),   // 5: drug.PatchDrugRequest
+	(*DeleteDrugRequest)(nil),  // 6: drug.DeleteDrugRequest
+	(*DeleteDrugResponse)(nil), // 7: drug.DeleteDrugResponse
+	(*SyncRequest)(nil),        // 8: drug.SyncRequest
+	(*SyncResponse)(nil),       // 9: drug.SyncResponse
 }
 var file_proto_drug_proto_depIdxs = []int32{
-	1, // 0: drug.DrugService.GetDrug:input_type -> drug.GetDrugRequest
-	2, // 1: drug.DrugService.SearchDrugs:input_type -> drug.SearchRequest
-	3, // 2: drug.DrugService.SyncFromFDA:input_type -> drug.SyncRequest
-	0, // 3: drug.DrugService.GetDrug:output_type -> drug.Drug
-	0, // 4: drug.DrugService.SearchDrugs:output_type -> drug.Drug
-	4, // 5: drug.DrugService.SyncFromFDA:output_type -> drug.SyncResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: drug.CreateDrugRequest.drug:type_name -> drug.Drug
+	0, // 1: drug.UpdateDrugRequest.drug:type_name -> drug.Drug
+	1, // 2: drug.DrugService.GetDrug:input_type -> drug.GetDrugRequest
+	2, // 3: drug.DrugService.SearchDrugs:input_type -> drug.SearchRequest
+	3, // 4: drug.DrugService.CreateDrug:input_type -> drug.CreateDrugRequest
+	4, // 5: drug.DrugService.UpdateDrug:input_type -> drug.UpdateDrugRequest
+	5, // 6: drug.DrugService.PatchDrug:input_type -> drug.PatchDrugRequest
+	6, // 7: drug.DrugService.DeleteDrug:input_type -> drug.DeleteDrugRequest
+	8, // 8: drug.DrugService.SyncFromFDA:input_type -> drug.SyncRequest
+	0, // 9: drug.DrugService.GetDrug:output_type -> drug.Drug
+	0, // 10: drug.DrugService.SearchDrugs:output_type -> drug.Drug
+	0, // 11: drug.DrugService.CreateDrug:output_type -> drug.Drug
+	0, // 12: drug.DrugService.UpdateDrug:output_type -> drug.Drug
+	0, // 13: drug.DrugService.PatchDrug:output_type -> drug.Drug
+	7, // 14: drug.DrugService.DeleteDrug:output_type -> drug.DeleteDrugResponse
+	9, // 15: drug.DrugService.SyncFromFDA:output_type -> drug.SyncResponse
+	9, // [9:16] is the sub-list for method output_type
+	2, // [2:9] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_drug_proto_init() }
@@ -394,13 +735,14 @@ func file_proto_drug_proto_init() {
 	if File_proto_drug_proto != nil {
 		return
 	}
+	file_proto_drug_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_drug_proto_rawDesc), len(file_proto_drug_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
