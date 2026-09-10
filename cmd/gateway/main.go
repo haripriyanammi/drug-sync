@@ -55,11 +55,29 @@ func main() {
 	}
 }
 
+// ---------- CORS ----------
+
+// setCORS allows the browser page on :3000 to call this gateway on :8080.
+func setCORS(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+// handlePreflight answers the browser's OPTIONS check that comes
+// before every DELETE, PUT and PATCH.
+func handlePreflight(w http.ResponseWriter) {
+	setCORS(w)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ---------- ROUTERS ----------
 
 // /drugs  → GET (search) or POST (create)
 func handleCollection(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	case http.MethodOptions:
+		handlePreflight(w)
 	case http.MethodGet:
 		handleSearch(w, r)
 	case http.MethodPost:
@@ -71,6 +89,12 @@ func handleCollection(w http.ResponseWriter, r *http.Request) {
 
 // /drugs/{id}  → GET, PUT, PATCH or DELETE
 func handleItem(w http.ResponseWriter, r *http.Request) {
+	// A preflight carries no real id, so answer it before checking one.
+	if r.Method == http.MethodOptions {
+		handlePreflight(w)
+		return
+	}
+
 	id := strings.TrimPrefix(r.URL.Path, "/drugs/")
 	if id == "" {
 		writeError(w, http.StatusBadRequest, "missing drug id")
@@ -177,8 +201,8 @@ func handleUpdate(w http.ResponseWriter, r *http.Request, id string) {
 	defer cancel()
 
 	updated, err := client.UpdateDrug(ctx, &drugpb.UpdateDrugRequest{
-		Id:   id,//from url
-		Drug: toDrug(body),// from json
+		Id:   id,
+		Drug: toDrug(body),
 	})
 	if err != nil {
 		writeGRPCError(w, err)
@@ -231,13 +255,17 @@ func handleDelete(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	setCORS(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 // ---------- ADMIN ----------
 
 func handleSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		handlePreflight(w)
+		return
+	}
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -297,8 +325,8 @@ func str(p *string) string {
 }
 
 func writeJSON(w http.ResponseWriter, code int, body any) {
+	setCORS(w)
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(body)
 }

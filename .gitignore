@@ -3,3 +3,5 @@
 /gateway-bin
 .DS_Store
 .env
+web/node_modules/
+web/.next/

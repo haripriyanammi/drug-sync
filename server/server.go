@@ -11,6 +11,7 @@ import (
 
 	"drugsync/fdaclient"
 	"drugsync/normalize"
+	"drugsync/notify"
 	drugpb "drugsync/proto"
 	"drugsync/store"
 )
@@ -88,6 +89,8 @@ func (s *DrugServer) CreateDrug(ctx context.Context, req *drugpb.CreateDrugReque
 	if err != nil {
 		return nil, storeError(err, "create drug")
 	}
+	go notify.Drugf("New drug added: **%s** (%s)", created.BrandName, created.Id)
+
 	return created, nil
 }
 
@@ -159,6 +162,7 @@ func (s *DrugServer) DeleteDrug(ctx context.Context, req *drugpb.DeleteDrugReque
 	if err := s.store.Delete(ctx, req.Id); err != nil {
 		return nil, storeError(err, "delete drug")
 	}
+	go notify.Drugf("Drug deleted: `%s`", req.Id)
 	return &drugpb.DeleteDrugResponse{Deleted: true}, nil
 }
 
@@ -191,7 +195,7 @@ func (s *DrugServer) SyncFromFDA(ctx context.Context, req *drugpb.SyncRequest) (
 		}
 		saved++
 	}
-
+	go notify.Drugf("Sync complete: %d fetched, %d saved, %d skipped", len(records), saved, skipped)
 	return &drugpb.SyncResponse{
 		Fetched: int32(len(records)),
 		Saved:   saved,

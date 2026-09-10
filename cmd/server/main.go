@@ -19,7 +19,7 @@ func main() {
 		dsn = "postgres://haripriya@localhost:5432/drugsync?sslmode=disable"
 	}
 
-	st, err := store.New(dsn)//the store is born here 
+	st, err := store.New(dsn) //the store is born here
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
